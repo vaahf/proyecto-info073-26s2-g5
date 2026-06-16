@@ -3,7 +3,8 @@ import os
 import random
 
 import pygame
-
+pygame.init()
+pygame.mixer.music.load("Pantalla_inicio.mp3")
 # Estados del juego
 ESTADO_INICIO = "inicio"
 ESTADO_INSTRUCCIONES = "instrucciones"
@@ -103,9 +104,16 @@ def poblar_tablero(tablero):
 
 
 def refrescar_tablero(screen, tablero):
+    piso = pygame.image.load("data\sprites\piso.png").convert_alpha()
+    araña = pygame.image.load("data\sprites\Araña.png").convert_alpha()
+    Mosca = pygame.image.load("data\sprites\mosca.png").convert_alpha()
+    insecticida = pygame.image.load("data\sprites\max.jpg").convert()
+
     """
     Dibuja el estado actual del tablero en la pantalla.
 
+    
+    
     Parámetros:
         - screen: La pantalla sobre la cual estamos dibujando.
         - tablero: El tablero con sus posiciones actuales.
@@ -133,33 +141,17 @@ def refrescar_tablero(screen, tablero):
         pos_x = 0
         for j in range(COLUMNAS):
             if tablero[i][j] == OBSTACULO:
-                # Dibuja un rectángulo en la posición (pos_x, pos_y) y que sea
-                # de tamaño (ancho_elem, alto_elem) y color negro.
-                pygame.draw.rect(
-                    screen,
-                    "black",
-                    pygame.Rect((pos_x, pos_y), (ancho_elem, alto_elem)),
-                )
+                #aparece un raid
+                screen.blit(insecticida, [pos_x, pos_y])
+                
             elif tablero[i][j] == JUGADOR:
                 # Dibujamos un círculo verde en la posición (pos_x + radio, pos_y + radio),
                 # con un radio definido por la variable "radio" (ancho_elem / 2).
-                pygame.draw.circle(
-                    screen,
-                    "green",
-                    (pos_x + radio, pos_y + radio),
-                    radio,
-                )
+                screen.blit(araña, [pos_x, pos_y])
+                
             elif tablero[i][j] == MANZANA:
-                pygame.draw.rect(
-                    screen,
-                    "red",
-                    # Acá reducimos el tamaño del rectángulo
-                    # para identificarlo más fácilmente
-                    pygame.Rect(
-                        (pos_x + 10, pos_y + 10),
-                        (ancho_elem - 20, alto_elem - 20),
-                    ),
-                )
+                screen.blit(Mosca, [pos_x, pos_y])
+                
 
             # Estamos recorriendo los píxeles de la pantalla, por lo que
             # debemos sumar el ancho y altura en pixeles de cada elemento que
@@ -352,6 +344,7 @@ def main():
     direccion = (0, 0)
     tiempo_ultimo_mov = 0
 
+
     mostrar_pantalla(screen, PANTALLA_INICIO)
 
     # Este es el bucle principal del juego, todo lo que sucede en el juego
@@ -366,6 +359,7 @@ def main():
             # Si es que se presiona alguna tecla.
             if evento.type == pygame.KEYDOWN:
                 if estado == ESTADO_INICIO:
+                    pygame.mixer.music.play(-1)
                     if evento.key == pygame.K_SPACE:
                         tablero, pos_jugador = reiniciar()
                         direccion = (0, 0)
