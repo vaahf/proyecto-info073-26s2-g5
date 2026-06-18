@@ -102,12 +102,15 @@ def poblar_tablero(tablero):
     aparecer_aleatorio(tablero, OBSTACULO)
     aparecer_aleatorio(tablero, MANZANA)
 
+def dibujar_panel(screen,fuente,largo):
+    
+
 
 def refrescar_tablero(screen, tablero):
     piso = pygame.image.load("data\sprites\piso.png").convert_alpha()
     araña = pygame.image.load("data\sprites\Araña.png").convert_alpha()
     Mosca = pygame.image.load("data\sprites\mosca.png").convert_alpha()
-    insecticida = pygame.image.load("data\sprites\max.jpg").convert()
+    insecticida = pygame.image.load("data\sprites\max.png").convert_alpha()
 
     """
     Dibuja el estado actual del tablero en la pantalla.
