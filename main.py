@@ -24,7 +24,6 @@ PANTALLA_DERROTA = "pantalla_derrota.bmp"
 
 # Para evitar que el jugador se mueva demasiado rápido
 RETRASO = 200
-
 # Códigos de cada elemento del tablero
 VACIO = 0
 OBSTACULO = 1
@@ -102,7 +101,7 @@ def poblar_tablero(tablero):
     aparecer_aleatorio(tablero, OBSTACULO)
     aparecer_aleatorio(tablero, MANZANA)
 
-def dibujar_panel(screen,fuente,largo):
+
     
 
 
