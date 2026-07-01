@@ -23,7 +23,8 @@ PANTALLA_VICTORIA = "pantalla_victoria.bmp"
 PANTALLA_DERROTA = "pantalla_derrota.bmp"
 
 # Para evitar que el jugador se mueva demasiado rápido
-RETRASO = 200
+RETRASO =300
+
 # Códigos de cada elemento del tablero
 VACIO = 0
 OBSTACULO = 1
@@ -36,8 +37,22 @@ MANZANA = 3
 FILAS = 15
 COLUMNAS = 15
 
+#Celas del borde
+BORDE = (
+    [(c, 0) for c in range(COLUMNAS)]
+    + [(c, FILAS - 1) for c in range(COLUMNAS)]
+    + [(0, f) for f in range(1, FILAS - 1)]
+    + [(COLUMNAS - 1, f) for f in range(1, FILAS - 1)]
+)
 
-def aparecer_aleatorio(tablero, id_elem):
+
+#Manzanas necesarias para ganar
+MANZANAS_PARA_GANAR = 6
+
+#Configuración de obstaculos
+CANT_OBSTACULOS = 8
+
+def aparecer_aleatorio(tablero, id_elem, incluir_borde=True):
     """
     Coloca un elemento en una casilla vacía aleatoria del tablero.
 
@@ -76,6 +91,9 @@ def aparecer_aleatorio(tablero, id_elem):
     #     if tablero[fila][columna] == VACIO
     # ]
 
+    if not incluir_borde:
+        vacios = [pos for pos in vacios if pos not in BORDE]
+
     # Si no hay casillas vacías, retornamos un valor especial.
     if len(vacios) == 0:
         return -1, -1
@@ -98,15 +116,22 @@ def poblar_tablero(tablero):
     Parámetros:
         - tablero: El tablero con sus posiciones actuales.
     """
-    aparecer_aleatorio(tablero, OBSTACULO)
-    aparecer_aleatorio(tablero, MANZANA)
 
+
+    for i in range(CANT_OBSTACULOS):
+        aparecer_aleatorio(tablero, OBSTACULO, incluir_borde=False)
+    aparecer_aleatorio(tablero, MANZANA)
 
     
 
 
 def refrescar_tablero(screen, tablero):
-    piso = pygame.image.load("data\sprites\piso.png").convert_alpha()
+    alto_elem = int(screen.get_height() / FILAS)
+    ancho_elem = int(screen.get_width() / COLUMNAS)
+    tam_celda = (ancho_elem, alto_elem)
+
+
+    piso = pygame.transform.scale(pygame.image.load("data\sprites\pisoo.png").convert(), tam_celda)
     araña = pygame.image.load("data\sprites\Araña.png").convert_alpha()
     Mosca = pygame.image.load("data\sprites\mosca.png").convert_alpha()
     insecticida = pygame.image.load("data\sprites\max.png").convert_alpha()
@@ -142,6 +167,7 @@ def refrescar_tablero(screen, tablero):
         # Posición en eje "x" en unidad de píxeles.
         pos_x = 0
         for j in range(COLUMNAS):
+            screen.blit(piso, [pos_x, pos_y])
             if tablero[i][j] == OBSTACULO:
                 #aparece un raid
                 screen.blit(insecticida, [pos_x, pos_y])
@@ -204,7 +230,7 @@ def cambiar_direccion(keys, direccion_actual):
     return direccion_actual
 
 
-def avanzar(tablero, pos_jugador, direccion):
+def avanzar(tablero, pos_jugador, direccion, manzanas_comidas):
     """
     Avanza el jugador un paso en la dirección dada.
 
@@ -232,22 +258,34 @@ def avanzar(tablero, pos_jugador, direccion):
 
     # Verificamos que no haya choque con el borde del tablero.
     if not (0 <= ind_nueva_col < COLUMNAS and 0 <= ind_nueva_fila < FILAS):
-        return "derrota", pos_jugador
+        return "derrota", pos_jugador, manzanas_comidas
 
     # Obtenemos el elemento que se encuentre en el tablero en la nueva posición del jugador.
     pos_elem = tablero[ind_nueva_fila][ind_nueva_col]
 
     if pos_elem == OBSTACULO:
-        return "derrota", pos_jugador
+        return "derrota", pos_jugador, manzanas_comidas
 
     if pos_elem == MANZANA:
-        return "victoria", (ind_nueva_col, ind_nueva_fila)
+        manzanas_comidas += 1
+
+        #Mover al jugador a la nueva casilla
+        tablero[ind_actual_fila][ind_actual_col] = VACIO
+        tablero[ind_nueva_fila][ind_nueva_col] = JUGADOR
+
+        #   Si llegamos al minimo, victoria
+        if manzanas_comidas >= MANZANAS_PARA_GANAR:
+            return "victoria", (ind_nueva_col, ind_nueva_fila), manzanas_comidas
+        
+        #   Si no, genera otra manzana y continuar
+        aparecer_aleatorio(tablero, MANZANA)
+        return "ok", (ind_nueva_col, ind_nueva_fila), manzanas_comidas
 
     # Movimiento normal, si es que no encontramos manzana ni obstáculo.
     tablero[ind_actual_fila][ind_actual_col] = VACIO
     tablero[ind_nueva_fila][ind_nueva_col] = JUGADOR
 
-    return "ok", (ind_nueva_col, ind_nueva_fila)
+    return "ok", (ind_nueva_col, ind_nueva_fila), manzanas_comidas
 
 
 def reiniciar():
@@ -299,7 +337,7 @@ def reiniciar():
     # Colocamos al jugador en una posición aleatoria.
     pos_jugador = aparecer_aleatorio(tablero, JUGADOR)
 
-    return tablero, pos_jugador
+    return tablero, pos_jugador, 0
 
 
 def mostrar_pantalla(screen, nombre_archivo):
@@ -345,6 +383,9 @@ def main():
     pos_jugador = (0, 0)
     direccion = (0, 0)
     tiempo_ultimo_mov = 0
+    manzanas_comidas = 0
+
+
 
 
     mostrar_pantalla(screen, PANTALLA_INICIO)
@@ -363,7 +404,7 @@ def main():
                 if estado == ESTADO_INICIO:
                     pygame.mixer.music.play(-1)
                     if evento.key == pygame.K_SPACE:
-                        tablero, pos_jugador = reiniciar()
+                        tablero, pos_jugador, manzanas_comidas = reiniciar()
                         direccion = (0, 0)
                         # Obtiene tiempo en milisegundos
                         tiempo_ultimo_mov = pygame.time.get_ticks()
@@ -379,7 +420,7 @@ def main():
 
                 elif estado in (ESTADO_DERROTA, ESTADO_VICTORIA):
                     if evento.key == pygame.K_r:
-                        tablero, pos_jugador = reiniciar()
+                        tablero, pos_jugador, manzanas_comidas = reiniciar()
                         direccion = (0, 0)
                         tiempo_ultimo_mov = pygame.time.get_ticks()
                         estado = ESTADO_JUGANDO
@@ -398,7 +439,7 @@ def main():
             # La variable RETRASO hace que si no han pasado esa cantidad de ticks,
             # entonces no se avanzará en el tablero.
             if direccion != (0, 0) and tiempo_actual - tiempo_ultimo_mov >= RETRASO:
-                resultado, pos_jugador = avanzar(tablero, pos_jugador, direccion)
+                resultado, pos_jugador, manzanas_comidas = avanzar(tablero, pos_jugador, direccion, manzanas_comidas)
 
                 if resultado == "derrota":
                     estado = ESTADO_DERROTA
