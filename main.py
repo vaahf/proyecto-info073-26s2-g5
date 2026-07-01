@@ -29,6 +29,12 @@ VACIO = 0
 OBSTACULO = 1
 JUGADOR = 2
 MANZANA = 3
+ENEMIGO = 4
+
+CANT_ENEMIGOS = 3
+RETRASO_ENEMIGOS = 3
+
+
 
 # Tamaño del tablero
 # Si se cambian estas constantes, se debe modificar la definición
@@ -90,6 +96,8 @@ def aparecer_aleatorio(tablero, id_elem):
 
     return columna, fila
 
+def obtener_direccion_aleatoria_enemigo():
+    return random.choice([(0,-1),(0,1),(-1,0),(1,0)])
 
 def poblar_tablero(tablero):
     """
