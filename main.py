@@ -4,7 +4,7 @@ import random
 
 import pygame
 pygame.init()
-pygame.mixer.music.load("Pantalla_inicio.mp3")
+pygame.mixer.music.load("Musica\musica_juego.mp3")
 # Estados del juego
 ESTADO_INICIO = "inicio"
 ESTADO_INSTRUCCIONES = "instrucciones"
