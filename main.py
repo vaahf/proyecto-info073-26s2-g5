@@ -4,7 +4,7 @@ import random
 
 import pygame
 pygame.init()
-pygame.mixer.music.load("Musica\musica_juego.mp3")
+pygame.mixer.music.load("Musica\\musica_juego.mp3")
 # Estados del juego
 ESTADO_INICIO = "inicio"
 ESTADO_INSTRUCCIONES = "instrucciones"
@@ -23,7 +23,7 @@ PANTALLA_VICTORIA = "pantalla_victoria.bmp"
 PANTALLA_DERROTA = "pantalla_derrota.bmp"
 
 # Para evitar que el jugador se mueva demasiado rápido
-RETRASO =300
+RETRASO =175
 
 # Códigos de cada elemento del tablero
 VACIO = 0
@@ -32,16 +32,37 @@ JUGADOR = 2
 MANZANA = 3
 ENEMIGO = 4
 
-CANT_ENEMIGOS = 3
-RETRASO_ENEMIGOS = 3
-
-
+CANT_ENEMIGOS = 1
+RETRASO_ENEMIGOS = 150
 
 # Tamaño del tablero
 # Si se cambian estas constantes, se debe modificar la definición
 # del tablero que se encuentra en función reiniciar().
 FILAS = 15
 COLUMNAS = 15
+
+#tamaño de pantalla
+ANCHO_VENTANA=1920
+ALTO_VENTANA=1080
+LADO_TABLERO=800
+ANCHO_PANEL= ANCHO_VENTANA-LADO_TABLERO
+
+
+def dibujar_panel(screen, fuente, manzanas_comidas):
+    panel = pygame.Rect(LADO_TABLERO, 0, ANCHO_PANEL, ALTO_VENTANA)
+    pygame.draw.rect(screen, "gray15", panel)
+
+    x = LADO_TABLERO + 24
+    titulo = fuente.render("ARAÑA VS MOSCAS", True, "white")
+    screen.blit(titulo, (x, 30))
+
+    manzanas_txt = fuente.render(f"Manzanas: {manzanas_comidas}", True, "white")
+    screen.blit(manzanas_txt, (x, 100))
+
+    meta_txt = fuente.render(f"Meta: {MANZANAS_PARA_GANAR}", True, "yellow")
+    screen.blit(meta_txt, (x, 140))
+
+
 
 #Celas del borde
 BORDE = (
@@ -56,8 +77,34 @@ BORDE = (
 MANZANAS_PARA_GANAR = 6
 
 #Configuración de obstaculos
-CANT_OBSTACULOS = 8
+CANT_OBSTACULOS = random.randint(6,10)
 
+def obtener_direccion_aleatoria():
+    return random.choice([(0, -1), (0, 1), (-1, 0), (1,0)])
+
+def avanzar_enemigos(tablero , pos_enemigos, manzanas):
+    for i in range(len(pos_enemigos)):
+        col, fila = pos_enemigos[i]
+
+        dir_col, dir_fila = obtener_direccion_aleatoria()
+
+        nueva_col = col + dir_col
+        nueva_fila = fila + dir_fila
+
+        if 0 <= nueva_col < COLUMNAS and 0 <= nueva_fila < FILAS:
+            if tablero[nueva_fila][nueva_col] == VACIO:
+                tablero[fila][col] = VACIO
+                tablero[nueva_fila][nueva_col] = ENEMIGO
+                pos_enemigos[i] = (nueva_col, nueva_fila)
+
+            elif tablero[nueva_fila][nueva_col] == JUGADOR and manzanas<3:
+                return "derrota", pos_enemigos
+            
+            elif tablero[nueva_fila][nueva_col] == JUGADOR and manzanas>2:
+                return "victoria", pos_enemigos
+            
+    return "ok", pos_enemigos
+    
 def aparecer_aleatorio(tablero, id_elem, incluir_borde=True):
     """
     Coloca un elemento en una casilla vacía aleatoria del tablero.
@@ -133,70 +180,49 @@ def poblar_tablero(tablero):
     
 
 
-def refrescar_tablero(screen, tablero):
-    alto_elem = int(screen.get_height() / FILAS)
-    ancho_elem = int(screen.get_width() / COLUMNAS)
+def refrescar_tablero(screen, tablero, manzanas_comidas, fuente):
+    # Tamaño de cada celda basado en el área del tablero
+    alto_elem = LADO_TABLERO // FILAS
+    ancho_elem = LADO_TABLERO // COLUMNAS
     tam_celda = (ancho_elem, alto_elem)
 
-
-    piso = pygame.transform.scale(pygame.image.load("data\sprites\pisoo.png").convert(), tam_celda)
-    araña = pygame.image.load("data\sprites\Araña.png").convert_alpha()
-    Mosca = pygame.image.load("data\sprites\mosca.png").convert_alpha()
-    insecticida = pygame.image.load("data\sprites\max.png").convert_alpha()
-
-    """
-    Dibuja el estado actual del tablero en la pantalla.
-
     
-    
-    Parámetros:
-        - screen: La pantalla sobre la cual estamos dibujando.
-        - tablero: El tablero con sus posiciones actuales.
-    """
 
-    # Rellena la pantalla con el color gris, básicamente pintando
-    # por encima de lo que estaba anteriormente.
-    screen.fill("gray30")
+    # Cargar imágenes (conviene hacerlo una sola vez fuera de la función)
+    piso = pygame.transform.scale(pygame.image.load("data/sprites/pisoo.png").convert(), tam_celda)
+    araña_normal = pygame.image.load("data/sprites/Araña.png").convert_alpha()
+    araña_buena = pygame.image.load("data/sprites/Araña_buena.png").convert_alpha()
+    mosca = pygame.image.load("data/sprites/mosca.png").convert_alpha()
+    insecticida = pygame.image.load("data/sprites/max.png").convert_alpha()
+    enemigo = pygame.image.load("data/sprites/enemigo.png").convert_alpha()
 
-    # Podemos calcular el tamaño en pixeles que tendrá cada
-    # casilla al dividir tanto la altura de la pantalla (screen.get_height())
-    # como el ancho (screen.get_width()) por la cantidad de filas y columnas respectivamente.
-    # Por ejemplo en este caso alto_elem sería 800 / 15 = 53.3, lo que nos indica que la
-    # altura de cada elemento es de 53.3 píxeles.
-    alto_elem = screen.get_height() / FILAS
-    ancho_elem = screen.get_width() / COLUMNAS
-    # Como el jugador es un círculo, se necesita el radio.
-    radio = ancho_elem / 2
+    # Rellenar el área del tablero con el color base
+    pygame.draw.rect(screen, "gray30", (0, 0, LADO_TABLERO, ALTO_VENTANA))
 
-    # Posición en eje "y" en unidad de píxeles.
     pos_y = 0
-
     for i in range(FILAS):
-        # Posición en eje "x" en unidad de píxeles.
         pos_x = 0
         for j in range(COLUMNAS):
-            screen.blit(piso, [pos_x, pos_y])
+            screen.blit(piso, (pos_x, pos_y))
             if tablero[i][j] == OBSTACULO:
-                #aparece un raid
-                screen.blit(insecticida, [pos_x, pos_y])
-                
+                screen.blit(insecticida, (pos_x, pos_y))
             elif tablero[i][j] == JUGADOR:
-                # Dibujamos un círculo verde en la posición (pos_x + radio, pos_y + radio),
-                # con un radio definido por la variable "radio" (ancho_elem / 2).
-                screen.blit(araña, [pos_x, pos_y])
-                
+                # Si tiene 3 o más manzanas, usa el sprite bueno
+                if manzanas_comidas >= 6:
+                    screen.blit(araña_buena, (pos_x, pos_y))
+                else:
+                    screen.blit(araña_normal, (pos_x, pos_y))
             elif tablero[i][j] == MANZANA:
-                screen.blit(Mosca, [pos_x, pos_y])
-                
-
-            # Estamos recorriendo los píxeles de la pantalla, por lo que
-            # debemos sumar el ancho y altura en pixeles de cada elemento que
-            # ya hayamos recorrido para avanzar al siguiente.
+                screen.blit(mosca, (pos_x, pos_y))
+            elif tablero[i][j] == ENEMIGO:
+                screen.blit(enemigo, (pos_x, pos_y))
             pos_x += ancho_elem
         pos_y += alto_elem
+    
+    dibujar_panel(screen, fuente, manzanas_comidas)
 
-    # Refresca el contenido que se ve en pantalla.
     pygame.display.flip()
+
 
 
 def cambiar_direccion(keys, direccion_actual):
@@ -272,7 +298,13 @@ def avanzar(tablero, pos_jugador, direccion, manzanas_comidas):
     pos_elem = tablero[ind_nueva_fila][ind_nueva_col]
 
     if pos_elem == OBSTACULO:
-        return "derrota", pos_jugador, manzanas_comidas
+       return "derrota", pos_jugador, manzanas_comidas
+
+    if pos_elem == ENEMIGO:
+        if manzanas_comidas >= 6:
+            return "victoria", pos_jugador, manzanas_comidas
+        else:
+            return "derrota", pos_jugador, manzanas_comidas
 
     if pos_elem == MANZANA:
         manzanas_comidas += 1
@@ -281,9 +313,6 @@ def avanzar(tablero, pos_jugador, direccion, manzanas_comidas):
         tablero[ind_actual_fila][ind_actual_col] = VACIO
         tablero[ind_nueva_fila][ind_nueva_col] = JUGADOR
 
-        #   Si llegamos al minimo, victoria
-        if manzanas_comidas >= MANZANAS_PARA_GANAR:
-            return "victoria", (ind_nueva_col, ind_nueva_fila), manzanas_comidas
         
         #   Si no, genera otra manzana y continuar
         aparecer_aleatorio(tablero, MANZANA)
@@ -342,10 +371,14 @@ def reiniciar():
 
     poblar_tablero(tablero)
 
-    # Colocamos al jugador en una posición aleatoria.
-    pos_jugador = aparecer_aleatorio(tablero, JUGADOR)
+    posiciones = aparecer_aleatorio(tablero, JUGADOR)
 
-    return tablero, pos_jugador, 0
+    # Colocamos al jugador en una posición aleatoria.
+    pos_enemigos = []
+    for _ in range(CANT_ENEMIGOS):
+        pos_enemigos.append(aparecer_aleatorio(tablero, ENEMIGO))
+
+    return tablero, posiciones, 0, pos_enemigos
 
 
 def mostrar_pantalla(screen, nombre_archivo):
@@ -375,11 +408,13 @@ def mostrar_pantalla(screen, nombre_archivo):
         print(f"Advertencia: No se encontró la imagen {ruta}")
 
 
+
 def main():
     pygame.init()
+    fuente = pygame.font.Font(None, 36)
 
     # Establecemos la resolución de la pantalla.
-    screen = pygame.display.set_mode((800, 800))
+    screen = pygame.display.set_mode((ANCHO_VENTANA, ALTO_VENTANA), pygame.FULLSCREEN)
 
     # Establecemos el título de la ventana.
     pygame.display.set_caption("Juego Básico")
@@ -392,17 +427,20 @@ def main():
     direccion = (0, 0)
     tiempo_ultimo_mov = 0
     manzanas_comidas = 0
-
-
-
+    tiempo_ultimo_mov_enemigos = 0
+    pos_enemigos = []
 
     mostrar_pantalla(screen, PANTALLA_INICIO)
 
     # Este es el bucle principal del juego, todo lo que sucede en el juego
     # está aquí.
     while running:
+        
         # Se analizan los eventos del bucle actual.
         for evento in pygame.event.get():
+            if evento.type == pygame.KEYDOWN:
+               if evento.key == pygame.K_F11:
+                  pygame.display.toggle_fullscreen()
             # Si es que se quiere cerrar la ventana.
             if evento.type == pygame.QUIT:
                 running = False
@@ -412,12 +450,12 @@ def main():
                 if estado == ESTADO_INICIO:
                     pygame.mixer.music.play(-1)
                     if evento.key == pygame.K_SPACE:
-                        tablero, pos_jugador, manzanas_comidas = reiniciar()
+                        tablero, pos_jugador, manzanas_comidas, pos_enemigos = reiniciar()
                         direccion = (0, 0)
                         # Obtiene tiempo en milisegundos
                         tiempo_ultimo_mov = pygame.time.get_ticks()
                         estado = ESTADO_JUGANDO
-                        refrescar_tablero(screen, tablero)
+                        refrescar_tablero(screen, tablero, manzanas_comidas, fuente)
                     elif evento.key == pygame.K_i:
                         estado = ESTADO_INSTRUCCIONES
                         mostrar_pantalla(screen, PANTALLA_INSTRUCCIONES)
@@ -428,11 +466,11 @@ def main():
 
                 elif estado in (ESTADO_DERROTA, ESTADO_VICTORIA):
                     if evento.key == pygame.K_r:
-                        tablero, pos_jugador, manzanas_comidas = reiniciar()
+                        tablero, pos_jugador, manzanas_comidas, pos_enemigos = reiniciar()
                         direccion = (0, 0)
                         tiempo_ultimo_mov = pygame.time.get_ticks()
                         estado = ESTADO_JUGANDO
-                        refrescar_tablero(screen, tablero)
+                        refrescar_tablero(screen, tablero, manzanas_comidas, fuente)
 
                     if evento.key == pygame.K_ESCAPE:
                         estado = ESTADO_INICIO
@@ -443,6 +481,8 @@ def main():
 
         if estado == ESTADO_JUGANDO:
             tiempo_actual = pygame.time.get_ticks()  # En milisegundos
+            tiempo_actual_enemigos = pygame.time.get_ticks()
+
 
             # La variable RETRASO hace que si no han pasado esa cantidad de ticks,
             # entonces no se avanzará en el tablero.
@@ -457,10 +497,20 @@ def main():
                     mostrar_pantalla(screen, PANTALLA_VICTORIA)
                 else:
                     tiempo_ultimo_mov = tiempo_actual
-                    refrescar_tablero(screen, tablero)
+                    refrescar_tablero(screen, tablero, manzanas_comidas, fuente)
+            if tiempo_actual_enemigos - tiempo_ultimo_mov_enemigos >= RETRASO_ENEMIGOS:
+                resultado, pos_enemigos = avanzar_enemigos(tablero, pos_enemigos, manzanas_comidas)
+
+                if resultado == "derrota":
+                    estado = ESTADO_DERROTA
+                    mostrar_pantalla(screen, PANTALLA_DERROTA)
+                else:
+                    tiempo_ultimo_mov_enemigos = tiempo_actual_enemigos
+                    refrescar_tablero(screen, tablero, manzanas_comidas, fuente)
+    
+    
 
     pygame.quit()
-
 
 if __name__ == "__main__":
     main()
